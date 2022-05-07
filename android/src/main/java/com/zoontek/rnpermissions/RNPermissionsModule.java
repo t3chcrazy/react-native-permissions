@@ -9,13 +9,17 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Process;
 import android.provider.Settings;
+import android.util.Log;
 import android.util.SparseArray;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.facebook.react.bridge.ActivityEventListener;
+//import com.facebook.react.bridge.BaseActivityEventListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
@@ -35,6 +39,7 @@ import java.util.ArrayList;
 public class RNPermissionsModule extends ReactContextBaseJavaModule implements PermissionListener {
 
   private static final String ERROR_INVALID_ACTIVITY = "E_INVALID_ACTIVITY";
+  private static final String ERROR_SETTINGS_INTENT_ERROR = "ERROR_SETTINGS_INTENT_ERROR";
   public static final String MODULE_NAME = "RNPermissions";
   private static final String SETTING_NAME = "@RNPermissions:NonRequestables";
 
@@ -46,10 +51,39 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
   private final String UNAVAILABLE = "unavailable";
   private final String BLOCKED = "blocked";
 
+  private int fileRequestCode = 1;
+  private Promise filePromise;
+
+  private final ActivityEventListener fileActivityEventListener = new ActivityEventListener() {
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+      try {
+        if (requestCode == fileRequestCode && resultCode == Activity.RESULT_OK) {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            filePromise.resolve(GRANTED);
+          }
+          else {
+            filePromise.resolve(DENIED);
+          }
+        }
+        else {
+          filePromise.reject(ERROR_SETTINGS_INTENT_ERROR, "No response");
+        }
+      }
+      catch (Exception e) {
+          filePromise.reject(ERROR_SETTINGS_INTENT_ERROR, e.toString());
+      }
+      finally {
+        filePromise = null;
+      }
+    }
+  };
+
   public RNPermissionsModule(ReactApplicationContext reactContext) {
     super(reactContext);
     mSharedPrefs = reactContext.getSharedPreferences(SETTING_NAME, Context.MODE_PRIVATE);
     mRequests = new SparseArray<Request>();
+    reactContext.addActivityEventListener(fileActivityEventListener);
   }
 
   @Override
@@ -401,6 +435,22 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
       mRequestCode++;
     } catch (IllegalStateException e) {
       promise.reject(ERROR_INVALID_ACTIVITY, e);
+    }
+  }
+
+  @ReactMethod
+  public void openFileSettings(Promise promise) {
+    try {
+      Intent intent = new Intent();
+      intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+      Context context = getReactApplicationContext();
+      Uri uri = Uri.fromParts("package", context.getPackageName(), null);
+      intent.setData(uri);
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      getCurrentActivity().startActivityForResult(intent, fileRequestCode);
+    }
+    catch (Exception e) {
+      Log.e("RNPermissions", e.toString());
     }
   }
 

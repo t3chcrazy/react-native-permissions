@@ -21,10 +21,15 @@ const NativeModule: {
   requestMultiplePermissions: (
     permissions: Permission[],
   ) => Promise<Record<Permission, PermissionStatus>>;
+  openFileSettings: () => Promise<PermissionStatus>;
 } = NativeModules.RNPermissions;
 
 async function openSettings(): Promise<void> {
   await NativeModule.openSettings();
+}
+
+async function openFileSettings(): Promise<PermissionStatus> {
+  return NativeModule.openFileSettings();
 }
 
 function check(permission: Permission): Promise<PermissionStatus> {
@@ -89,4 +94,5 @@ export const methods: Contract = {
   requestLocationAccuracy,
   requestMultiple,
   requestNotifications: checkNotifications,
+  openFileSettings
 };

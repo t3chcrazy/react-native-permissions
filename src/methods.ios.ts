@@ -10,6 +10,7 @@ import type {
   PermissionStatus,
 } from './types';
 import {uniq} from './utils';
+import { openFileSettings } from './unsupportedPlatformMethods'
 
 const NativeModule: {
   available: Permission[];
@@ -106,4 +107,5 @@ export const methods: Contract = {
   requestLocationAccuracy,
   requestMultiple,
   requestNotifications,
+  openFileSettings
 };

@@ -5,6 +5,7 @@ import {
   checkLocationAccuracy,
   openLimitedPhotoLibraryPicker,
   requestLocationAccuracy,
+  openFileSettings
 } from './unsupportedPlatformMethods';
 import {uniq} from './utils';
 
@@ -75,4 +76,5 @@ export const methods: Contract = {
   requestLocationAccuracy,
   requestMultiple,
   requestNotifications: checkNotifications,
+  openFileSettings
 };
